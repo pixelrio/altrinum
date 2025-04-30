@@ -1,47 +1,24 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import api from '../../api';
-import toast from 'react-hot-toast';
+import React from 'react';
+import { usePage, Link } from '@inertiajs/react';
 
-// Event Type
-interface Event {
-  id: number;
-  name: string;
-  start_time: string;
-  end_time: string;
-}
-
-export default function EventsList() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    fetchEvents();
-  }, []);
-
-  const fetchEvents = async () => {
-    setLoading(true);
-    try {
-      const response = await api.get<{ data: Event[] }>('/events');
-      setEvents(response.data.data);
-    } catch (error) {
-      toast.error('Failed to load events.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteEvent = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this event?')) return;
-    try {
-      await api.delete(`/events/${id}`);
-      toast.success('Event deleted successfully!');
-      fetchEvents();
-    } catch (error) {
-      toast.error('Error deleting event.');
-    }
-  };
+export default function Index() {
+  const { events } = usePage().props as { events: any[] };
 
   return (
-    <section className="p-6">
-      <header className="flex justify-between items-cent
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Events</h1>
+      <Link href="/events/create" className="bg-blue-500 text-white px-4 py-2 rounded">Create Event</Link>
+      <ul className="mt-6 space-y-2">
+        {events.map((event) => (
+          <li key={event.id} className="bg-white shadow rounded p-4">
+            <h2 className="text-lg font-semibold">{event.name}</h2>
+            <p className="text-sm">{event.start_time} → {event.end_time}</p>
+            <p className="text-sm text-gray-600">Cost: ${event.cost}</p>
+            <Link href={`/events/${event.id}/edit`} className="text-blue-600 text-sm mr-4">Edit</Link>
+            <Link href={`/events/${event.id}`} className="text-green-600 text-sm">View</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

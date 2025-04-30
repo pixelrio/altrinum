@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::create('events', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('series_id')->constrained()->onDelete('restrict');
+            //$table->foreignId('series_id')->constrained()->onDelete('restrict');
             $table->foreignId('tenant_id')->constrained()->onDelete('restrict');
-            $table->foreignId('category_id')->nullable()->constrained();
+            //$table->foreignId('category_id')->nullable()->constrained();
             $table->string('name');
             $table->text('short_description')->nullable();
             $table->text('long_description')->nullable();
