@@ -1,15 +1,6 @@
 import React from 'react';
-import EventForm from './form';
+import EventForm from './EventForm';
 
 export default function Create() {
-  return <EventForm />;
+  return <EventForm mode="create" />;
 }
-
-// === resources/js/Pages/Events/edit.tsx ===
-import React from 'react';
-import { usePage } from '@inertiajs/react';
-import EventForm from './form';
-
-export default function Edit() {
-  const { event } = usePage().props as { event: any };
-  return <EventForm event={event} />;

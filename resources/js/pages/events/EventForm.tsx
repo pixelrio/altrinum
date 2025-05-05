@@ -1,36 +1,36 @@
+
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useNavigate } from 'react-router-dom';
-import api from '../../api';
-import toast from 'react-hot-toast';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+import { router } from '@inertiajs/react';
 
-// 1. Define Zod schema
-const eventSchema = z.object({
-  name: z.string().min(1, 'Event name is required'),
-  start_time: z.string().min(1, 'Start time is required'),
-  end_time: z.string().min(1, 'End time is required'),
-  cost: z.coerce.number().nonnegative(),
-  early_bird_cost: z.coerce.number().nonnegative(),
-  format: z.enum(['online', 'in-person', 'hybrid']),
-  series_id: z.coerce.number().int(),
-  tenant_id: z.coerce.number().int(),
+const schema = yup.object().shape({
+  name: yup.string().required('Event name is required'),
+  start_time: yup.string().required('Start time is required'),
+  end_time: yup.string().required('End time is required'),
+  cost: yup.number().typeError('Cost must be a number').min(0).required(),
+  early_bird_cost: yup.number().typeError('Early bird cost must be a number').min(0).required(),
+  format: yup.string().oneOf(['online', 'in-person', 'hybrid']).required(),
+  series_id: yup.number().typeError('Series ID must be a number').required(),
+  tenant_id: yup.number().typeError('Tenant ID must be a number').required(),
 });
 
-type EventFormData = z.infer<typeof eventSchema>;
+type EventFormData = yup.InferType<typeof schema>;
 
 interface EventFormProps {
-  event?: Partial<EventFormData>;
+  event?: Partial<EventFormData & { id: number }>;
   mode: 'create' | 'edit';
-  id?: string;
 }
 
-export default function EventForm({ event, mode, id }: EventFormProps) {
-  const navigate = useNavigate();
-
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<EventFormData>({
-    resolver: zodResolver(eventSchema),
+export default function EventForm({ event, mode }: EventFormProps) {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<EventFormData>({
+    resolver: yupResolver(schema),
     defaultValues: {
       name: '',
       start_time: '',
@@ -40,28 +40,29 @@ export default function EventForm({ event, mode, id }: EventFormProps) {
       format: 'in-person',
       series_id: 1,
       tenant_id: 1,
-    }
+    },
   });
 
-  // 2. If we are editing, preload the form with existing event
   useEffect(() => {
     if (event) {
-      reset(event);
+      reset({
+        name: event.name ?? '',
+        start_time: event.start_time ?? '',
+        end_time: event.end_time ?? '',
+        cost: event.cost ?? 0,
+        early_bird_cost: event.early_bird_cost ?? 0,
+        format: event.format ?? 'in-person',
+        series_id: event.series_id ?? 1,
+        tenant_id: event.tenant_id ?? 1,
+      });
     }
   }, [event, reset]);
 
-  const onSubmit = async (data: EventFormData) => {
-    try {
-      if (mode === 'create') {
-        await api.post('/events', data);
-        toast.success('Event created successfully!');
-      } else {
-        await api.put(`/events/${id}`, data);
-        toast.success('Event updated successfully!');
-      }
-      navigate('/events');
-    } catch (error) {
-      toast.error('Something went wrong.');
+  const onSubmit = (data: EventFormData) => {
+    if (mode === 'create') {
+      router.post('/events', data);
+    } else if (mode === 'edit' && event?.id) {
+      router.put(`/events/${event.id}`, data);
     }
   };
 
@@ -73,33 +74,20 @@ export default function EventForm({ event, mode, id }: EventFormProps) {
         {/* Name */}
         <div>
           <label className="block font-semibold mb-1">Event Name</label>
-          <input
-            type="text"
-            {...register('name')}
-            className="w-full border p-2 rounded"
-          />
+          <input {...register('name')} className="w-full border p-2 rounded" />
           {errors.name && <p className="text-red-600 text-sm">{errors.name.message}</p>}
         </div>
 
-        {/* Start and End Times */}
+        {/* Time */}
         <div className="flex gap-4">
           <div className="flex-1">
             <label className="block font-semibold mb-1">Start Time</label>
-            <input
-              type="datetime-local"
-              {...register('start_time')}
-              className="w-full border p-2 rounded"
-            />
+            <input type="datetime-local" {...register('start_time')} className="w-full border p-2 rounded" />
             {errors.start_time && <p className="text-red-600 text-sm">{errors.start_time.message}</p>}
           </div>
-
           <div className="flex-1">
             <label className="block font-semibold mb-1">End Time</label>
-            <input
-              type="datetime-local"
-              {...register('end_time')}
-              className="w-full border p-2 rounded"
-            />
+            <input type="datetime-local" {...register('end_time')} className="w-full border p-2 rounded" />
             {errors.end_time && <p className="text-red-600 text-sm">{errors.end_time.message}</p>}
           </div>
         </div>
@@ -108,21 +96,12 @@ export default function EventForm({ event, mode, id }: EventFormProps) {
         <div className="flex gap-4">
           <div className="flex-1">
             <label className="block font-semibold mb-1">Cost</label>
-            <input
-              type="number"
-              {...register('cost', { valueAsNumber: true })}
-              className="w-full border p-2 rounded"
-            />
+            <input type="number" {...register('cost')} className="w-full border p-2 rounded" />
             {errors.cost && <p className="text-red-600 text-sm">{errors.cost.message}</p>}
           </div>
-
           <div className="flex-1">
             <label className="block font-semibold mb-1">Early Bird Cost</label>
-            <input
-              type="number"
-              {...register('early_bird_cost', { valueAsNumber: true })}
-              className="w-full border p-2 rounded"
-            />
+            <input type="number" {...register('early_bird_cost')} className="w-full border p-2 rounded" />
             {errors.early_bird_cost && <p className="text-red-600 text-sm">{errors.early_bird_cost.message}</p>}
           </div>
         </div>
@@ -130,10 +109,7 @@ export default function EventForm({ event, mode, id }: EventFormProps) {
         {/* Format */}
         <div>
           <label className="block font-semibold mb-1">Format</label>
-          <select
-            {...register('format')}
-            className="w-full border p-2 rounded"
-          >
+          <select {...register('format')} className="w-full border p-2 rounded">
             <option value="in-person">In-Person</option>
             <option value="online">Online</option>
             <option value="hybrid">Hybrid</option>
@@ -141,7 +117,10 @@ export default function EventForm({ event, mode, id }: EventFormProps) {
           {errors.format && <p className="text-red-600 text-sm">{errors.format.message}</p>}
         </div>
 
-        {/* Submit Button */}
+        {/* Hidden fields */}
+        <input type="hidden" {...register('series_id')} />
+        <input type="hidden" {...register('tenant_id')} />
+
         <button
           type="submit"
           disabled={isSubmitting}
